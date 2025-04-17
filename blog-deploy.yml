@@ -22,7 +22,7 @@ spec:    # 무엇을, 어떻게, 얼마나 배포할지 정의
       volumes:    # 파드에 붙일 저장소를 정의
         - name: blog-html
           persistentVolumeClaim:
-            claimName: blog-pvc1   # ConfigMap 안에 들어 있는 HTML 파일 사용
+            claimName: blog-pvc1   
 ---   # SVC
 apiVersion: v1
 kind: Service
