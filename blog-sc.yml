@@ -1,0 +1,11 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-client   # PVC에서 참조하는 이름
+mountOptions:
+  - nfsvers=4.2
+provisioner: nfs.csi.k8s.io  # 동적 프로비저너 이름
+parameters:
+  server: 211.183.3.99  # nfs 서버의 IP
+  share: /shared
+reclaimPolicy: Delete

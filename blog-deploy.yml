@@ -1,0 +1,76 @@
+---   # deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blog-deploy
+spec:    # 무엇을, 어떻게, 얼마나 배포할지 정의 
+  replicas: 1   # 몇 개의 Pod를 유지할지
+  selector:     # 어떤 Pod를 관리할지
+    matchLabels:
+      app: blog
+  template:     # 어떤 Pod를 만들지 (실제 내용)
+    metadata:
+      labels:
+        app: blog
+    spec:
+      containers:
+        - name: blogctn
+          image: nginx
+          volumeMounts:   # 컨테이너 안에 volume을 연결
+            - name: blog-html
+              mountPath: /usr/share/nginx/html  # nginx가 HTML을 읽는 위치
+            - name: blog-volume
+              mountPath: /usr/share/nginx/html/images
+      volumes:    # 실제 연결할 volume 정의
+        - name: blog-html
+          configMap:
+            name: blog-html   # ConfigMap 안에 들어 있는 HTML 파일 사용
+        - name: blog-volume
+          persistentVolumeClaim:
+            claimName: blog-pvc
+---   # SVC
+apiVersion: v1
+kind: Service
+metadata:
+  name: blog-svc
+spec:
+  selector:
+    app: blog
+  ports:
+    - name: blog-port
+      protocol: TCP
+      port: 80          # 클러스터 내부에서 사용자가 접근할 포트
+      targetPort: 80    # 컨테이너 안에서 실제로 열려 있는 포트
+---   # PVC 
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: blog-pvc
+spec:
+  accessModes:
+    - ReadWriteMany   # 여러 노드에서 동시에 읽고/쓸 수 있음(공유파일 필요할 때 필수수)
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: nfs-client  # 어떤 방식으로 볼륨을 생성할지를 판단
+---   # Ingress : HTTP(S) 트래픽을 내부 서비스로 라우팅하는 진입 지점
+apiVersion: networking.k8s.io/v1
+kind: Ingress   
+metadata:
+  name: aws9-ingress
+  annotations:  # 리소스에 부가 정보, 설정, 힌트를 줄 때 사용
+    nginx.ingress.kubernetes.io/rewrite-target: /   # 리라이트(주소 바꾸기) 옵션
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: www.aws9.pri
+      http:
+        paths:
+          - path: /blog
+            pathType: ImplementationSpecific
+            backend:  #이 경로로 들어온 요청은 blog-svc라는 서비스의 80번 포트로 전달
+              service:
+                name: blog-svc
+                port:
+                  number: 80         
+        
